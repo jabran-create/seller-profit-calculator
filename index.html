@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seller Profit Calculator — Amazon &amp; Etsy</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, Arial, sans-serif; background: #f4f6f8; color: #222; margin: 0; padding: 20px; }
+  .card { max-width: 520px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.sub { color: #666; margin: 0 0 18px; font-size: 14px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+  input, select { width: 100%; padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 8px; }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  button { width: 100%; margin-top: 18px; padding: 12px; font-size: 16px; font-weight: 700; color: #fff; background: #2563eb; border: 0; border-radius: 8px; cursor: pointer; }
+  button:hover { background: #1d4ed8; }
+  #result { margin-top: 18px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; display: none; }
+  #result table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  #result td { padding: 5px 0; }
+  #result td:last-child { text-align: right; font-weight: 600; }
+  #profit { font-size: 22px; font-weight: 800; }
+  .good { color: #15803d; } .bad { color: #b91c1c; }
+  .note { font-size: 12px; color: #888; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Seller Profit Calculator</h1>
+  <p class="sub">Amazon &amp; Etsy sellers — find your real profit before you list a product.</p>
+
+  <label>Marketplace</label>
+  <select id="market">
+    <option value="amazon">Amazon (referral fee)</option>
+    <option value="etsy">Etsy (transaction + payment fee)</option>
+    <option value="custom">Other / Custom</option>
+  </select>
+
+  <div class="row">
+    <div>
+      <label>Currency</label>
+      <select id="currency">
+        <option value="$">USD ($)</option>
+        <option value="£">GBP (£)</option>
+        <option value="Rs">PKR (Rs)</option>
+      </select>
+    </div>
+    <div>
+      <label>Selling price</label>
+      <input id="price" type="number" min="0" step="0.01" placeholder="e.g. 25.00">
+    </div>
+  </div>
+
+  <label>Product cost (buying + making)</label>
+  <input id="cost" type="number" min="0" step="0.01" placeholder="e.g. 10.00">
+
+  <label>Shipping cost (what you pay)</label>
+  <input id="shipping" type="number" min="0" step="0.01" placeholder="e.g. 3.00">
+
+  <label>Marketplace fee (%) — you can change it</label>
+  <input id="feePct" type="number" min="0" step="0.1" value="15">
+
+  <label>Fixed fee per order (e.g. Etsy $0.20 listing)</label>
+  <input id="feeFixed" type="number" min="0" step="0.01" value="0">
+
+  <label>Other costs (packaging, ads, etc.)</label>
+  <input id="other" type="number" min="0" step="0.01" placeholder="e.g. 1.00">
+
+  <button onclick="calculate()">Calculate profit</button>
+
+  <div id="result">
+    <table>
+      <tr><td>Selling price</td><td id="rPrice"></td></tr>
+      <tr><td>Marketplace fee</td><td id="rFee"></td></tr>
+      <tr><td>Product + shipping + other</td><td id="rCosts"></td></tr>
+      <tr><td>Profit per order</td><td id="profit"></td></tr>
+      <tr><td>Profit margin</td><td id="rMargin"></td></tr>
+      <tr><td>Break-even price</td><td id="rBreak"></td></tr>
+    </table>
+  </div>
+
+  <p class="note">Fee defaults are estimates only — Amazon referral is usually around 15%, Etsy charges 6.5% transaction + about 3% payment processing + $0.20 listing. Always check the live fee on the marketplace and edit the numbers above.</p>
+</div>
+
+<script>
+  const presets = {
+    amazon: { pct: 15, fixed: 0 },
+    etsy: { pct: 9.5, fixed: 0.20 },
+    custom: { pct: 0, fixed: 0 }
+  };
+  document.getElementById('market').addEventListener('change', function () {
+    const p = presets[this.value];
+    document.getElementById('feePct').value = p.pct;
+    document.getElementById('feeFixed').value = p.fixed;
+  });
+
+  function num(id) { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? 0 : v; }
+
+  function calculate() {
+    const cur = document.getElementById('currency').value;
+    const price = num('price'), cost = num('cost'), ship = num('shipping');
+    const pct = num('feePct'), fixed = num('feeFixed'), other = num('other');
+    const fee = price * pct / 100 + fixed;
+    const totalCost = cost + ship + other + fee;
+    const profit = price - totalCost;
+    const margin = price > 0 ? (profit / price * 100) : 0;
+    const breakEven = (cost + ship + other + fixed) / (1 - pct / 100);
+
+    const fmt = n => cur + ' ' + n.toFixed(2);
+    document.getElementById('rPrice').textContent = fmt(price);
+    document.getElementById('rFee').textContent = fmt(fee);
+    document.getElementById('rCosts').textContent = fmt(cost + ship + other);
+    const pEl = document.getElementById('profit');
+    pEl.textContent = fmt(profit);
+    pEl.className = profit >= 0 ? 'good' : 'bad';
+    document.getElementById('rMargin').textContent = margin.toFixed(1) + '%';
+    document.getElementById('rBreak').textContent = fmt(isFinite(breakEven) ? breakEven : 0);
+    document.getElementById('result').style.display = 'block';
+  }
+</script>
+</body>
+</html>
